@@ -1,9 +1,101 @@
 <!DOCTYPE html>
 <html>
-   <head>
-      <title>Akemi - Jenji converter</title>
-   </head>
-   <body>
-      <h1>Akemi - Jenji converter⭐️</h1>
-   </body>
+  <head>
+    <title>Akemi - Jenji converter</title>
+    <meta charset="utf-8" />
+    <script type="module">
+      import { createApp } from "https://unpkg.com/petite-vue?module";
+      const akemiHeaders = [
+        "Date",
+        "Nature",
+        "Hotel",
+        "Dejeuner",
+        "Pt dejeuner",
+        "Diner",
+        "Carburant",
+        "Kilometrage",
+        "Poste",
+        "Vol / Train",
+        "Divers",
+        "Fournitures bureau",
+        "TOTAL",
+      ];
+      const jenjiCategoryMap = {
+        Carburant: akemiHeaders.indexOf("Carburant"),
+        Dejeuner: akemiHeaders.indexOf("Dejeuner"),
+        Default: akemiHeaders.indexOf("Divers"),
+      };
+
+      createApp({
+        content: "",
+        get akemiContent() {
+          // récupère les en-têtes
+          const lines = this.content.split("\n");
+          if (lines.length < 2) {
+            return "Contenu vide";
+          }
+
+          // replace all accents
+          let header = lines[0];
+          header = header.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+          const headerParts = header.split("\t");
+
+          let output = [];
+          output.push(akemiHeaders.join("\t"));
+
+          const dateIdx = headerParts.indexOf("Date");
+          const natureIdx = headerParts.indexOf("Intitule");
+          const categoryIdx = headerParts.indexOf("Categorie");
+          const totalTtcIdx = headerParts.indexOf("Total TTC");
+
+          for (let line of lines.slice(1)) {
+            const parts = line.split("\t");
+            const date = parts[dateIdx];
+            const nature = parts[natureIdx];
+            const category = parts[categoryIdx];
+            const totalTtc = parts[totalTtcIdx];
+
+            // find the right category
+            const categoryHeader =
+              akemiHeaders[
+                jenjiCategoryMap[category] || jenjiCategoryMap.Default
+              ];
+
+            const outputLine = [];
+            for (let i = 0; i < akemiHeaders.length; i++) {
+              const akemiHeader = akemiHeaders[i];
+              if (akemiHeader === "Date") {
+                outputLine.push(date);
+              } else if (akemiHeader === "Nature") {
+                outputLine.push(nature);
+              } else if (akemiHeader === "TOTAL") {
+                outputLine.push(totalTtc);
+              } else if (akemiHeader === categoryHeader) {
+                outputLine.push(totalTtc);
+              } else {
+                outputLine.push("");
+              }
+            }
+            output.push(outputLine.join("\t"));
+          }
+
+          return output.join("\n");
+        },
+      }).mount();
+    </script>
+  </head>
+  <body>
+    <h1>Akemi - Jenji converter⭐️</h1>
+    <div style="display: flex; flex-direction: column" v-scope>
+      <textarea
+        v-model="content"
+        placeholder="Paste your Jenji here"
+        style="width: 100%"
+        rows="10"
+      ></textarea>
+      <xmp>{{ akemiContent }}</xmp>
+    </div>
+    <script src="https://unpkg.com/petite-vue" defer init></script>
+  </body>
 </html>
